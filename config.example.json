@@ -1,0 +1,17 @@
+{
+    "camera_index": 1,
+    "camera_width": 1920,
+    "camera_height": 1080,
+    "process_width": 960,
+    "preview_width": 800,
+    "detection_sensitivity": 15,
+    "min_face_size": 50,
+    "face_confirmation": 0.3,
+    "minimum_detection_frames": 3,
+    "notification_cooldown": 5.0,
+    "notifications_enabled": true,
+    "preview_on_startup": false,
+    "pause_when_locked": true,
+    "reconnect_delay": 3.0
+    "yunet_score_threshold": 0.90,
+}

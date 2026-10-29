@@ -1,0 +1,47 @@
+
+# Python virtual environment
+.venv/
+venv/
+
+# Python cache
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Trusted faces - private biometric data
+trusted_faces/
+
+# Application logs
+logs/
+*.log
+*.log.*
+
+# Personal configuration
+config.json
+
+# Local databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Local backups
+*_backup.py
+*.bak
+*.tmp
+
+# Development tools
+.vscode/
+.idea/
+
+# Windows files
+Thumbs.db
+desktop.ini
+.DS_Store
+
+# Environment variables and credentials
+.env
+.env.*
+!.env.example
+# Downloaded face recognition models
+models/*.onnx
+models/*.download
