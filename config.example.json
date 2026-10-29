@@ -1,5 +1,5 @@
 {
-    "camera_index": 1,
+    "camera_index": 0,
     "camera_width": 1920,
     "camera_height": 1080,
     "process_width": 960,
@@ -12,6 +12,6 @@
     "notifications_enabled": true,
     "preview_on_startup": false,
     "pause_when_locked": true,
-    "reconnect_delay": 3.0
-    "yunet_score_threshold": 0.90,
+    "reconnect_delay": 3.0,
+    "yunet_score_threshold": 0.90
 }

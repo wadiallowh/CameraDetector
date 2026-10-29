@@ -1,62 +1,58 @@
 # CameraDetector
 
-**CameraDetector** is a Windows webcam-monitoring application written in Python. It detects faces, compares them with locally registered trusted faces, and requests a Windows desktop notification when an **unrecognized face** is confirmed.
+**CameraDetector** is a Windows webcam-monitoring application written in Python. It detects faces with **OpenCV YuNet**, compares them with locally registered trusted faces using **SFace**, and requests a Windows desktop notification when an **unknown face** is confirmed. It includes a CLI control panel for managing webcams, detection settings, trusted identities, notifications, startup, and logs.
 
-It includes a command-line control panel for managing cameras, detection settings, trusted people, notifications, Windows startup, and diagnostic logs.
-
-> **Status:** Early release / personal project. Facial recognition is probabilistic and may produce false matches or missed detections. Do not use this as your only security or access-control system.
+> **Project status:** Early release / personal project. Face detection and recognition can produce false positives, false matches, and missed detections. Do not rely on this project as a security-grade identity or access-control system.
 
 ## Features
 
-- **Face detection and recognition:** OpenCV YuNet and SFace models.
-- **Trusted faces:** Enroll multiple consenting people; suppress alerts when only trusted faces are recognized.
-- **Unknown-person alerts:** Request Windows toast notifications for confirmed unrecognized faces, including when trusted and unknown people appear together.
-- **Confirmation filter:** Require a configurable detection duration and number of consecutive frames.
-- **Webcam selection:** Scan DirectShow cameras and choose an available device in the CLI.
-- **Background monitoring:** Hide the preview, or toggle it with **F8** while the detector is running in your signed-in Windows session.
-- **Windows session integration:** Release the webcam when Windows locks and reconnect after unlocking.
-- **Optional automatic startup:** Manage a Windows Task Scheduler task through the CLI.
-- **Rotating logs:** Keep bounded local event and error logs; oldest backups are overwritten.
+- YuNet face detection with **configurable detection sensitivity** (`yunet_score_threshold`).
+- SFace recognition against multiple locally registered, consenting people.
+- Windows toast notifications for unknown faces, even when a trusted person is also in view.
+- Configurable confirmation duration, minimum consecutive detection frames, and notification cooldown.
+- DirectShow webcam enumeration and camera selection.
+- Background monitoring with optional preview toggled using **F8**.
+- Webcam release when Windows locks and reconnection after unlocking.
+- Optional Windows Task Scheduler auto-start, installed and managed through the CLI.
+- Local rotating activity and error logs.
 
 ## Requirements
 
-- **Windows 11** (developed and tested on Windows 11; other versions are not verified).
-- **Python 3.13**, preferably 64-bit.
-- A Windows-compatible webcam and access to it under **Settings → Privacy & security → Camera**.
-- Internet access once to install Python packages and download face-recognition models.
+- **Windows 11** (the tested platform; other Windows versions have not been verified).
+- **Python 3.13** (64-bit recommended).
+- A compatible webcam with camera permissions enabled under Windows **Settings → Privacy & security → Camera**.
+- Internet access to install dependencies and download the detection/recognition models.
 
-This application uses Windows-specific packages and APIs (`pywin32`, `winotify`, DirectShow), so it is **not currently cross-platform**.
+This application depends on Windows-specific components, including DirectShow, `pywin32`, and `winotify`. It is **not currently cross-platform**.
 
 ## Installation
 
-### 1. Get the project
-
-Clone the repository (replace the placeholder URL with this project's actual GitHub URL once published):
+### 1. Clone the repository
 
 ```powershell
-git clone https://github.com/YOUR_USERNAME/CameraDetector.git
+git clone https://github.com/wadiallowh/CameraDetector.git
 cd CameraDetector
 ```
 
-Or download and extract the repository ZIP, then open a terminal in the extracted folder.
+Alternatively, download the ZIP from GitHub and extract it.
 
-### 2. Create the virtual environment
+### 2. Create and activate a virtual environment
 
-In **PowerShell**:
-
-```powershell
-py -3.13 -m venv .venv
-.\.venv\Scripts\Activate.ps1
-```
-
-In **Command Prompt (CMD)**:
+**Command Prompt (CMD):**
 
 ```cmd
 py -3.13 -m venv .venv
 .venv\Scripts\activate
 ```
 
-If PowerShell blocks activation, use CMD rather than broadly changing your script execution policy.
+**PowerShell:**
+
+```powershell
+py -3.13 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+```
+
+If PowerShell blocks activation, CMD is an alternative that does not require changing the PowerShell execution policy.
 
 ### 3. Install dependencies
 
@@ -64,75 +60,85 @@ If PowerShell blocks activation, use CMD rather than broadly changing your scrip
 python -m pip install -r requirements.txt
 ```
 
-### 4. Download the recognition models
+Always activate `.venv` before using `python`; otherwise, you may see `ModuleNotFoundError: No module named 'cv2'`.
+
+### 4. Download the models
 
 ```powershell
 python download_models.py
 ```
 
-This downloads the OpenCV Zoo **YuNet** face detector and **SFace** recognizer into `models/` and verifies their SHA-256 checksums. Model files are not committed to this repository.
+The script retrieves the YuNet detector and SFace recognizer from OpenCV Zoo and checks their SHA-256 hashes. The `.onnx` model files are downloaded locally and are **not included in Git**.
 
-### 5. Configure your camera
-
-Start the control panel:
+### 5. Select a camera
 
 ```powershell
 python control.py
 ```
 
-On first use, `config_manager.py` creates a local `config.json` from `config.example.json` if needed. Open **Camera Settings**, stop monitoring if it is running, scan available cameras, and choose the desired camera. Indices and friendly device names can vary by computer; verify the selection using the preview.
+Go to **Camera Settings**, scan the available cameras, and select the desired index. Stop monitoring first so the webcam is available for scanning. The local `config.json` is created automatically from `config.example.json` on first use.
 
-## Using CameraDetector
+## Usage
 
-### CLI control panel
+### Control panel
 
 ```powershell
 python control.py
 ```
 
-The main menu is organized into these categories:
-
-| Menu | What it manages |
+| Menu | Purpose |
 | --- | --- |
-| Monitoring Control | Scheduled-task status; start, stop, restart |
-| Detection Settings | Face confirmation duration, minimum detection frames; legacy detection options |
-| Trusted Faces | Register, list, remove, test recognition |
-| Camera Settings | Scan, select, inspect camera index |
-| Notification Settings | Enable/disable alerts; edit cooldown |
-| Startup Management | Install, remove, inspect Task Scheduler startup |
-| Logs & Diagnostics | View activity, errors, camera/session events, log sizes |
+| Monitoring Control | Check, start, stop, and restart the scheduled monitoring task |
+| Detection Settings | Adjust YuNet sensitivity, face confirmation time, and minimum detection frames |
+| Trusted Faces | Register, list, remove, and test trusted people |
+| Camera Settings | Find and select the webcam |
+| Notification Settings | Enable/disable notifications and set cooldown |
+| Startup Management | Install, remove, and check the Windows logon task |
+| Logs & Diagnostics | Inspect activity, errors, camera/session events, and log sizes |
 
-Changes to `config.json` take effect **after restarting the detector**. Closing the CLI itself does not stop a detector launched by Task Scheduler.
+**Configuration changes require restarting the monitoring process.** Exiting the CLI does not stop monitoring that was launched separately by Task Scheduler.
 
-### Start manually
+### Run manually
+
+With monitoring stopped in the control panel, run:
 
 ```powershell
 python detector.py
 ```
 
-The preview is hidden by default. Press **F8** to show or hide it. Closing the preview window does **not** stop monitoring. When started manually with `python.exe`, use **Ctrl+C** in the terminal to stop the process.
+The preview is hidden by default. Press **F8** to show or hide it. Closing the preview window hides the preview but does not necessarily end monitoring. Use **Ctrl+C** in the terminal to stop a manually started detector.
 
-### Trusted faces
+### Register trusted faces
 
-In `control.py`, go to **Trusted Faces → Register trusted person**. Stop the monitoring task first so the registration tool can access the camera. Enroll only people who consent to having their facial features stored. The enrollment tool gathers multiple face samples and saves facial embeddings locally in `trusted_faces/registry.json`.
+In **Trusted Faces → Register trusted person**, register only people who agree to have their facial features stored. The registration workflow collects multiple samples and saves embeddings locally in `trusted_faces/registry.json`. Stop monitoring before registration or recognition testing so the webcam is free.
 
-Use **Trusted Faces → Test face recognition** to verify matches. Registered people should appear as trusted; unrecognized people should be marked unknown. **Restart monitoring after adding or removing a trusted person** so the running detector reloads the registry.
-
-**Important:** A trusted match suppresses alerts only for that face. If an unknown face is also detected, the application can still alert. Matching can be wrong under different lighting or angles, so test it thoroughly before relying on it.
+Use **Trusted Faces → Test face recognition** to verify recognition. Restart the detector after adding or removing a person. A trusted face does not suppress alerts for another unknown face present in the same frame.
 
 ### Automatic startup
 
-From the CLI, choose **Startup Management → Install automatic startup**. The application uses a Windows Task Scheduler logon task and runs through `.venv\Scripts\pythonw.exe` without a visible console. Startup is optional and should be explicitly enabled by the user.
+Use **Startup Management → Install automatic startup** from the control panel. CameraDetector uses a Windows Task Scheduler logon task named `CameraDetector`, launched by the Python virtual environment's `pythonw.exe`. Startup is optional and requires explicit user action. The current task setup expects `.venv` in the project directory and may need adjustment for particular Windows account configurations.
 
-The current installer expects a `.venv` inside the project directory and may need adjustments for unusual Windows account configurations or permissions. The default task name is `CameraDetector`. Use the CLI to check or remove its startup registration.
+The detector is designed to release the webcam when Windows is locked; it is not a pre-login monitoring service.
 
-The detector is designed to monitor only while the signed-in Windows session is **unlocked**; it releases the camera while Windows is locked. It does not run as a pre-login surveillance service.
+## Detection sensitivity and configuration
 
-## Configuration
+Detection and recognition are **separate** processes:
 
-`config.example.json` is a distributable template. `config.json` is the user's local configuration and is ignored by Git.
+- **YuNet `yunet_score_threshold`** determines how confidently a face must be detected. **Lower values are more sensitive** and may produce more false detections. The controller accepts values from `0.50` to `0.99`.
+- **SFace `MATCH_THRESHOLD`** controls whether a detected face matches a registered person. It is currently defined in `face_recognition_engine.py` (default `0.50` cosine similarity), and **is not changed** by the YuNet sensitivity setting.
 
-Typical settings include:
+| YuNet threshold | Detection behavior (illustrative) |
+| --- | --- |
+| `0.50` | Very high sensitivity |
+| `0.60` | High sensitivity |
+| `0.70` | Moderately high sensitivity |
+| `0.80` | Balanced |
+| `0.90` | Strict (default in the example configuration) |
+| `0.95` | Very strict |
+
+Sensitivity descriptions are qualitative rather than guarantees. Test on your own camera and lighting conditions.
+
+An example `config.example.json` includes:
 
 ```json
 {
@@ -141,61 +147,69 @@ Typical settings include:
   "camera_height": 1080,
   "process_width": 960,
   "preview_width": 800,
-  "detection_sensitivity": 5,
-  "min_face_size": 60,
-  "face_confirmation": 0.5,
+  "detection_sensitivity": 15,
+  "min_face_size": 50,
+  "face_confirmation": 0.3,
+  "minimum_detection_frames": 3,
   "notification_cooldown": 5.0,
-  "minimum_detection_frames": 5,
   "notifications_enabled": true,
   "preview_on_startup": false,
   "pause_when_locked": true,
-  "reconnect_delay": 3.0
+  "reconnect_delay": 3.0,
+  "yunet_score_threshold": 0.90
 }
 ```
 
-**Note:** The current primary recognition pipeline uses **YuNet + SFace**. The `detection_sensitivity` and `min_face_size` values originated with the older Haar Cascade detector and **do not currently tune YuNet**. They are retained for compatibility; the CLI should eventually hide or repurpose these controls. This example uses `camera_index: 0` as a starting point, not a guarantee that index 0 is the desired webcam.
+`camera_index: 0` is only a starting value; the correct index depends on the computer. The older `detection_sensitivity` and `min_face_size` keys are **legacy Haar Cascade settings** retained in configuration for compatibility; they **do not control YuNet**. The CLI instead edits `yunet_score_threshold`.
 
-The current SFace recognition implementation uses a fixed cosine-similarity threshold defined in `face_recognition_engine.py`. It requires testing with different trusted and unknown people; similarity scores are not identity probabilities.
+Your personal `config.json` is excluded by `.gitignore`, so it may contain different values (for example, a YuNet threshold of `0.60`).
 
 ## Logs and diagnostics
 
-Logs are stored locally under `logs/`:
+Local logs live in `logs/`:
 
-- `detector.log`: application activity, camera connections, unknown-face confirmations, session changes.
-- `errors.log`: errors and exceptions.
+- `detector.log` — monitoring activity, detections, camera connections, and session events.
+- `errors.log` — exceptions and errors.
 
-Logs are size-rotated: each file may grow to approximately **2 MB**, with up to **three backups**. The oldest backups are overwritten automatically. This is **size-based retention**, not deletion after a number of days. The Logs & Diagnostics menu can show recent events; some views currently show only the active log files, not rotated backups.
-
-## Privacy and security
-
-- Facial **embeddings are biometric data**. Treat `trusted_faces/registry.json` as sensitive; do not commit or share it.
-- The registration tool saves feature vectors, not a permanent gallery of enrollment photos. Feature vectors are **not anonymous**.
-- Recognition processing and the registry are local; the program is not designed to upload webcam frames or face embeddings to a cloud service.
-- This project does not provide encryption at rest for the trusted-face registry. Protect your Windows account and local files.
-- `config.json`, `trusted_faces/`, `logs/`, virtual environments, and downloaded `.onnx` models are excluded from Git through `.gitignore`.
-- `.gitignore` does **not** remove data that has already been committed. Check `git status` and your commit history before making the repository public.
-- Respect the privacy and consent of people who may appear on camera, and comply with applicable rules for workplace or shared-space monitoring.
+Each active log can grow to around **2 MB**, with up to **three rotated backups**. This is size-based retention, not a time-based deletion policy.
 
 ## Troubleshooting
 
-**The process runs, but the camera light is off.** Check the CLI's task status, inspect `logs/detector.log` and `logs/errors.log`, and try restarting monitoring. A delayed logon task may help with device initialization. Confirm another app isn't using the camera.
+**`ModuleNotFoundError: No module named 'cv2'`:** Activate the project's `.venv` before running Python, or run `.venv\Scripts\python.exe detector.py` from the project directory.
 
-**The wrong camera opens.** Stop monitoring, scan under **Camera Settings**, select the correct index, and restart monitoring.
+**Webcam does not start or is already in use:** Stop the scheduled monitoring task and other camera apps. Inspect `logs/detector.log` and `logs/errors.log`, then restart monitoring.
 
-**Notifications don't appear.** Verify Windows Notifications and Do Not Disturb settings, then confirm notifications are enabled in the CLI.
+**Wrong webcam is selected:** Stop monitoring, rescan under **Camera Settings**, select the correct index, and restart.
 
-**Recognition doesn't work.** Run `python download_models.py` to check model files; stop monitoring and use **Trusted Faces → Test face recognition**. Re-enroll consenting trusted people under varied lighting if necessary.
+**Model initialization fails:** Run `python download_models.py` to verify/download the YuNet and SFace `.onnx` files. YuNet must be loaded by `cv2.FaceDetectorYN`, and SFace by `cv2.FaceRecognizerSF`.
 
-**An unknown person is labeled trusted.** Recognition is probabilistic. Do not treat the result as proof of identity. Adjust and evaluate the recognition threshold only after testing against multiple different people.
+**Face recognition fails or repeated exceptions appear:** Review `logs/errors.log`; ensure the recognition engine initializes both models. Use **Trusted Faces → Test face recognition** with monitoring stopped.
 
-## Project files
+**An unknown face is matched as trusted:** SFace similarity scores are not probabilities of identity. Test under varied lighting and with multiple people. Do not treat a match as proof of identity.
+
+**Notifications do not appear:** Check Windows Notifications/Do Not Disturb and the CLI's notification setting.
+
+## Privacy and limitations
+
+- **Facial embeddings are biometric data**, even if stored as numbers rather than photos. Keep `trusted_faces/registry.json` private; do not share it or commit it.
+- Face processing and registry storage are intended to remain on the local computer; the application does not intentionally upload webcam frames or face embeddings to a cloud service.
+- Stored embeddings are **not encrypted at rest** by the application. Protect your Windows account and files.
+- `.gitignore` excludes local configuration, biometric registry, logs, virtual environments, and downloaded `.onnx` models; it cannot retroactively remove previously committed information.
+- Respect consent, privacy, and relevant rules whenever a webcam may record or monitor other people.
+- The unknown-face confirmation mechanism is based on consecutive detections rather than persistent multi-frame identity tracking.
+- DirectShow camera indices can change; a clean installation on another Windows 11 machine has not yet been verified.
+
+## Project layout
 
 ```text
 CameraDetector/
-├── detector.py
-├── control.py
-├── config_manager.py
+├── README.md
+├── .gitignore
+├── requirements.txt
 ├── config.example.json
+├── config_manager.py
+├── control.py
+├── detector.py
 ├── face_recognition_engine.py
 ├── face_registration.py
 ├── trusted_faces.py
@@ -205,30 +219,13 @@ CameraDetector/
 ├── logger_manager.py
 ├── log_viewer.py
 ├── download_models.py
-├── requirements.txt
-├── .gitignore
-├── models/                 # downloaded locally
-├── trusted_faces/          # private biometric data; ignored
-└── logs/                   # local rotating logs; ignored
+├── models/              # models downloaded locally
+├── trusted_faces/       # private local biometric data
+└── logs/                # local rotating logs
 ```
 
-## Technologies
+## Third-party models and licensing
 
-Python · OpenCV · OpenCV Zoo (YuNet / SFace) · NumPy · PyGrabber · pywin32 · winotify · Windows Task Scheduler
+YuNet and SFace models come from OpenCV Zoo and retain their respective third-party terms. Review the model notices/licenses if redistributing or using them commercially. The project currently provides a downloader rather than bundling `.onnx` files.
 
-## Limitations and next steps
-
-- Face recognition can falsely accept or reject identities; it is not equivalent to secure biometric authentication.
-- Unknown-face confirmation currently counts consecutive frames containing an unknown candidate; it does **not** maintain persistent identity tracking across frames.
-- Camera indexing depends on DirectShow enumeration and may change after devices are connected or removed.
-- CLI configuration changes require restarting the monitoring process.
-- Some older Haar Cascade settings remain visible but unused by the YuNet detector.
-- Full clean-install testing on another Windows 11 computer is still recommended before declaring a stable release.
-
-## Third-party models
-
-YuNet and SFace models are downloaded from the **OpenCV Zoo** project. Review their accompanying model licenses and notices before redistribution or commercial use. This repository distributes a downloader rather than checking the `.onnx` files into Git.
-
-## License
-
-**License not yet selected.** Add an appropriate `LICENSE` file before declaring this an open-source release. Until then, standard copyright restrictions apply to the original project code.
+**No software license has been selected for the original CameraDetector code.** The repository is publicly viewable, but public availability alone does not grant permission to reuse or redistribute that code. Standard copyright restrictions apply unless a license is added later.
